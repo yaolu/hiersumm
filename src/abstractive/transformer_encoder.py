@@ -96,7 +96,7 @@ class TransformerInterEncoder(nn.Module):
         # src = src.view(batch_size * n_blocks, n_tokens)
         emb = self.embeddings(src)
         padding_idx = self.embeddings.padding_idx
-        mask_local = 1 - src.data.eq(padding_idx).view(batch_size * n_blocks, n_tokens)
+        mask_local = ~src.data.eq(padding_idx).view(batch_size * n_blocks, n_tokens)
         mask_block = torch.sum(mask_local.view(batch_size, n_blocks, n_tokens), -1) > 0
 
         local_pos_emb = self.pos_emb.pe[:, :n_tokens].unsqueeze(1).expand(batch_size, n_blocks, n_tokens,
@@ -113,9 +113,9 @@ class TransformerInterEncoder(nn.Module):
         for i in range(self.num_layers):
             if (self.transformer_types[i] == 'local'):
                 word_vec = self.transformer_layers[i](word_vec, word_vec,
-                                                      1 - mask_local)  # all_sents * max_tokens * dim
+                                                      ~mask_local)  # all_sents * max_tokens * dim
             elif (self.transformer_types[i] == 'inter'):
-                word_vec = self.transformer_layers[i](word_vec, 1 - mask_local, 1 - mask_block, batch_size, n_blocks)  # all_sents * max_tokens * dim
+                word_vec = self.transformer_layers[i](word_vec, ~mask_local, ~mask_block, batch_size, n_blocks)  # all_sents * max_tokens * dim
 
         word_vec = self.layer_norm(word_vec)
         mask_hier = mask_local[:, :, None].float()
@@ -129,7 +129,7 @@ class TransformerInterEncoder(nn.Module):
                     for i in range(src_features.size(1))]
         max_l = max([p.size(0) for p in unpadded])
         mask_hier = sequence_mask(torch.tensor([p.size(0) for p in unpadded]), max_l).to(self.device)
-        mask_hier = 1 - mask_hier[:, None, :]
+        mask_hier =  ~mask_hier[:, None, :]
 
         unpadded = torch.stack(
             [torch.cat([p, torch.zeros(max_l - p.size(0), src_features.size(-1)).to(self.device)]) for p in unpadded], 1)
@@ -201,7 +201,7 @@ class TransformerNewInterLayer(nn.Module):
         # block_vec = self.pooling(word_vec, mask_local)
 
         block_vec = self.pooling(word_vec, word_vec, mask_local)
-        _mask_local = ((1 - mask_local).unsqueeze(-1)).float()
+        _mask_local = ((~mask_local).unsqueeze(-1)).float()
         block_vec_avg = torch.sum(word_vec * _mask_local, 1) / (torch.sum(_mask_local, 1) + 1e-9)
         block_vec = self.dropout(block_vec) + block_vec_avg
         block_vec = self.layer_norm2(block_vec)
@@ -232,11 +232,11 @@ class TransformerEncoder(nn.Module):
         batch_size, n_tokens = src.size()
         emb = self.embeddings(src)
         padding_idx = self.embeddings.padding_idx
-        mask_hier = 1 - src.data.eq(padding_idx)
+        mask_hier =  ~src.data.eq(padding_idx)
         out = self.pos_emb(emb)
 
         for i in range(self.num_layers):
-            out = self.transformer_local[i](out, out, 1 - mask_hier)  # all_sents * max_tokens * dim
+            out = self.transformer_local[i](out, out, ~mask_hier)  # all_sents * max_tokens * dim
         out = self.layer_norm(out)
 
         mask_hier = mask_hier[:, :, None].float()

@@ -71,7 +71,7 @@ class Beam(object):
                  global_scorer=None,
                  min_length=0,
                  stepwise_penalty=False,
-                 block_ngram_repeat=0,
+                 block_ngram_repeat=5,
                  exclusion_tokens=set()):
 
         self.size = size
@@ -150,6 +150,7 @@ class Beam(object):
                     beam_scores[i] = -1e20
 
             # Block ngram repeats
+            self.block_ngram_repeat = 5 
             if self.block_ngram_repeat > 0:
                 ngrams = []
                 le = len(self.next_ys)

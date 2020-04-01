@@ -23,7 +23,7 @@ def build_optim(args, model, checkpoint):
         decay_method=args.decay_method,
         warmup_steps=args.warmup_steps, model_size=args.enc_hidden_size)
 
-
+    optim.set_parameters(list(model.named_parameters()))
     if args.train_from != '':
         optim.optimizer.load_state_dict(checkpoint['optim'])
         if args.visible_gpus != '-1':
@@ -37,7 +37,7 @@ def build_optim(args, model, checkpoint):
                 "Error: loaded Adam optimizer from existing model" +
                 " but optimizer state is empty")
 
-    optim.set_parameters(list(model.named_parameters()))
+    # optim.set_parameters(list(model.named_parameters()))
     return optim
 
 

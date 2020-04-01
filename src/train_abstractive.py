@@ -10,7 +10,7 @@ import os
 import pickle
 import signal
 import time
-
+import debugger
 import sentencepiece
 
 from abstractive.model_builder import Summarizer
@@ -107,7 +107,7 @@ def train(args,device_id):
         for k in opt.keys():
             if (k in model_flags):
                 setattr(args, k, opt[k])
-
+        ckpt_step = args.train_from.strip('.pt').split('_')[-1]
     else:
         checkpoint = None
 
@@ -125,6 +125,8 @@ def train(args,device_id):
 
     model = Summarizer(args, word_padding_idx, vocab_size, device, checkpoint)
     optim = model_builder.build_optim(args, model, checkpoint)
+    if args.train_from != '':
+        optim._step = int(ckpt_step)
     logger.info(model)
     trainer = build_trainer(args, device_id, model, symbols, vocab_size, optim)
 
@@ -333,7 +335,7 @@ if __name__ == '__main__':
     parser.add_argument('-emb_size', default=256, type=int)
     parser.add_argument('-enc_layers', default=8, type=int)
     parser.add_argument('-dec_layers', default=1, type=int)
-    parser.add_argument('-enc_dropout', default=6, type=float)
+    parser.add_argument('-enc_dropout', default=0, type=float)
     parser.add_argument('-dec_dropout', default=0, type=float)
     parser.add_argument('-enc_hidden_size', default=256, type=int)
     parser.add_argument('-dec_hidden_size', default=256, type=int)

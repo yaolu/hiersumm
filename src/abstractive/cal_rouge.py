@@ -7,7 +7,7 @@ import abstractive.my_pyrouge  as pyrouge
 import shutil
 import sys
 import codecs
-
+import tempfile
 # from onmt.utils.logging import init_logger, logger
 
 def process(data):
@@ -38,6 +38,7 @@ def process(data):
         rouge_results = r.convert_and_evaluate()
         print(rouge_results)
         results_dict = r.output_to_dict(rouge_results)
+        #results_dict = {'candidates': candidates, 'references': references}#r.output_to_dict(rouge_results)
     finally:
         pass
         if os.path.isdir(tmp_dir):
